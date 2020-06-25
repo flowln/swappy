@@ -3,6 +3,14 @@
     {
       "filename": "meson.build",
       "updater": "script/bump-meson-build.js"
+    },
+    {
+      "filename": "Cargo.toml",
+      "updater": "script/bump-cargo.js"
+    },
+    {
+      "filename": "Cargo.lock",
+      "updater": "script/bump-cargo.js"
     }
   ]
 }
