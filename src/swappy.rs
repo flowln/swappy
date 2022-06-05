@@ -1,12 +1,14 @@
-use config::Config;
 use die::die;
-use gio::prelude::*;
-use gio::{resources_register, ApplicationCommandLine, ApplicationExt, ApplicationFlags, Resource};
+use gio::{resources_register, ApplicationCommandLine, ApplicationFlags, Resource};
 use glib::{Bytes, Char, OptionArg, OptionFlags, Value};
 use gtk::prelude::*;
-use gtk::{Application, Builder};
-use std::env::args;
+use gtk::{Application, ApplicationWindow, Builder, DrawingArea};
 use version::version;
+
+use gtk::gio;
+use gtk::glib;
+
+use crate::config::Config;
 
 pub struct State {
     config: Config,
@@ -20,15 +22,6 @@ impl State {
     }
 }
 
-fn draw_area_handler(_val: &[Value]) -> Option<Value> {
-    println!("'draw' event called");
-    for v in _val {
-        println!("{:?}", v);
-    }
-
-    Some(false.to_value())
-}
-
 fn build_layout(_: &Application) {
     let res_bytes = include_bytes!("../res/swappy.gresource");
     let data = Bytes::from(&res_bytes[..]);
@@ -37,14 +30,19 @@ fn build_layout(_: &Application) {
 
     let builder = Builder::from_resource("/me/jtheoof/swappy/swappy.glade");
 
-    builder.connect_signals(move |_, handler_name| {
-        println!("handler name {}", handler_name);
-        if handler_name == "draw_area_handler" {
-            Box::new(draw_area_handler)
-        } else {
-            Box::new(|_| None)
-        }
+    let window: ApplicationWindow = builder
+        .object("paint-window")
+        .expect("could not find paint-window in glade file");
+
+    let paint_area: DrawingArea = builder
+        .object("painting-area")
+        .expect("could not find painting-area in glade file");
+
+    paint_area.connect_resize(move |_, w, h| {
+        println!("paint-area resized {}x{}", w, h);
     });
+
+    window.show();
 }
 
 fn on_handle_local_options(_app: &Application, options: &glib::VariantDict) -> i32 {
@@ -73,12 +71,11 @@ pub fn init() {
     let app = Application::new(
         Some("me.jtheoof.swappy"),
         ApplicationFlags::HANDLES_OPEN | ApplicationFlags::HANDLES_COMMAND_LINE,
-    )
-    .expect("Initialization failed...");
+    );
 
     app.add_main_option(
         "version",
-        Char::new('v').unwrap(),
+        Char::from(b'v'),
         OptionFlags::NONE,
         OptionArg::None,
         "Print version and quit",
@@ -87,7 +84,7 @@ pub fn init() {
 
     app.add_main_option(
         "file",
-        Char::new('f').unwrap(),
+        Char::from(b'f'),
         OptionFlags::NONE,
         OptionArg::String,
         "Load a file at a specific path",
@@ -96,7 +93,7 @@ pub fn init() {
 
     app.add_main_option(
         "output-file",
-        Char::new('o').unwrap(),
+        Char::from(b'o'),
         OptionFlags::NONE,
         OptionArg::String,
         "Print the final surface to the given file when exiting, use - to print to stdout",
@@ -106,7 +103,5 @@ pub fn init() {
     app.connect_handle_local_options(on_handle_local_options);
     app.connect_command_line(on_command_line_connected);
 
-    app.run(&args().collect::<Vec<_>>());
-
-    gtk::main();
+    app.run();
 }
