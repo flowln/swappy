@@ -10,10 +10,10 @@ fn compile_resource() {
     Command::new("sh")
         .args(&[
             "-c",
-            "cd res && glib-compile-resources swappy.gresource.xml",
+            "cd src/ui && glib-compile-resources swappy.gresource.xml",
         ])
         .output()
-        .expect("failed to compile res/swappy.gresource.xml");
+        .expect("failed to compile src/ui/swappy.gresource.xml");
 }
 
 fn main() {

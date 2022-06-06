@@ -4,6 +4,6 @@ mod swappy;
 use swappy::State;
 
 fn main() {
-    swappy::init();
-    State::new();
+    let mut state = State::new();
+    swappy::init(state);
 }

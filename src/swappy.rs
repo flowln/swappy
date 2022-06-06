@@ -1,8 +1,8 @@
 use die::die;
 use gio::{resources_register, ApplicationCommandLine, ApplicationFlags, Resource};
-use glib::{Bytes, Char, OptionArg, OptionFlags, Value};
+use glib::{Bytes, Char, OptionArg, OptionFlags};
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Builder, DrawingArea};
+use gtk::{Application, ApplicationWindow, Box, Builder, Button, DrawingArea};
 use version::version;
 
 use gtk::gio;
@@ -10,39 +10,70 @@ use gtk::glib;
 
 use crate::config::Config;
 
+pub struct UiState {
+    panel_displayed: bool,
+}
+
 pub struct State {
     config: Config,
+    ui: UiState,
+}
+
+impl UiState {
+    pub fn new() -> UiState {
+        UiState {
+            panel_displayed: false,
+        }
+    }
 }
 
 impl State {
     pub fn new() -> State {
         State {
             config: Config::new("test"),
+            ui: UiState::new(),
         }
     }
 }
 
-fn build_layout(_: &Application) {
-    let res_bytes = include_bytes!("../res/swappy.gresource");
+fn build_ui(app: &Application) {
+    println!("building ui");
+    let res_bytes = include_bytes!("ui/swappy.gresource");
     let data = Bytes::from(&res_bytes[..]);
     let resource = Resource::from_data(&data).unwrap();
     resources_register(&resource);
 
-    let builder = Builder::from_resource("/me/jtheoof/swappy/swappy.glade");
+    let builder = Builder::from_resource("/me/jtheoof/swappy/swappy.ui");
 
     let window: ApplicationWindow = builder
         .object("paint-window")
-        .expect("could not find paint-window in glade file");
+        .expect("could not find paint-window in ui file");
+
+    let side_panel: Box = builder
+        .object("side-panel")
+        .expect("could not find side-panel in ui file");
 
     let paint_area: DrawingArea = builder
         .object("painting-area")
-        .expect("could not find painting-area in glade file");
+        .expect("could not find painting-area in ui file");
+
+    let toggle_button: Button = builder
+        .object("btn-toggle-panel")
+        .expect("could not find btn-toggle-panel in ui file");
+
+    toggle_button.connect_clicked(move |_| {
+        println!("button clicked");
+        side_panel.set_property("visible", true);
+    });
 
     paint_area.connect_resize(move |_, w, h| {
         println!("paint-area resized {}x{}", w, h);
     });
 
-    window.show();
+    window.set_application(Some(app));
+    window.present();
+
+    println!("ok window is shown");
 }
 
 fn on_handle_local_options(_app: &Application, options: &glib::VariantDict) -> i32 {
@@ -61,13 +92,12 @@ fn on_handle_local_options(_app: &Application, options: &glib::VariantDict) -> i
 }
 
 fn on_command_line_connected(app: &Application, _: &ApplicationCommandLine) -> i32 {
-    // build_ui(app);
     println!("'command-line' called");
-    build_layout(app);
+    build_ui(app);
     0
 }
 
-pub fn init() {
+pub fn init(state: State) {
     let app = Application::new(
         Some("me.jtheoof.swappy"),
         ApplicationFlags::HANDLES_OPEN | ApplicationFlags::HANDLES_COMMAND_LINE,
